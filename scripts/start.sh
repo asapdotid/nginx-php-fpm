@@ -3,7 +3,7 @@
 # Disable Strict Host checking for non interactive git clones
 
 mkdir -p -m 0700 /root/.ssh
-# Prevent config files from being filled to infinity by force of stop and restart the container 
+# Prevent config files from being filled to infinity by force of stop and restart the container
 echo "" > /root/.ssh/config
 echo -e "Host *\n\tStrictHostKeyChecking no\n" >> /root/.ssh/config
 
@@ -81,18 +81,17 @@ if [ ! -d "/var/www/html/.git" ]; then
 fi
 
 # Enable custom nginx config files if they exist
-if [ -f /var/www/html/conf/nginx/nginx.conf ]; then
-  cp /var/www/html/conf/nginx/nginx.conf /etc/nginx/nginx.conf
+if [ -f /var/www/html/config/nginx/nginx.conf ]; then
+  cp /var/www/html/config/nginx/nginx.conf /etc/nginx/nginx.conf
 fi
 
-if [ -f /var/www/html/conf/nginx/nginx-site.conf ]; then
-  cp /var/www/html/conf/nginx/nginx-site.conf /etc/nginx/sites-available/default.conf
+if [ -f /var/www/html/config/nginx/nginx-site.conf ]; then
+  cp /var/www/html/config/nginx/nginx-site.conf /etc/nginx/sites-available/default.conf
 fi
 
-if [ -f /var/www/html/conf/nginx/nginx-site-ssl.conf ]; then
-  cp /var/www/html/conf/nginx/nginx-site-ssl.conf /etc/nginx/sites-available/default-ssl.conf
+if [ -f /var/www/html/config/nginx/nginx-site-ssl.conf ]; then
+  cp /var/www/html/config/nginx/nginx-site-ssl.conf /etc/nginx/sites-available/default-ssl.conf
 fi
-
 
 # Prevent config files from being filled to infinity by force of stop and restart the container
 lastlinephpconf="$(grep "." /usr/local/etc/php-fpm.conf | tail -1)"
@@ -228,6 +227,24 @@ if [ -z "$SKIP_COMPOSER" ]; then
     fi
 fi
 
+# Logrotate
+TS_FORMAT="%Y-%m-%dT%H:%M:%S%z "
+
+if [ -e /etc/logrotate.conf ]; then
+  echo "Using mounted /etc/logrotate.conf:" | ts "${TS_FORMAT}"
+fi
+ts "${TS_FORMAT}" < /etc/logrotate.conf
+
+if [ -d "/etc/periodic/${LOGROTATE_CRON:-15min}" ]; then
+  echo "using /etc/periodic/${LOGROTATE_CRON:-15min} cron schedule" | ts "${TS_FORMAT}"
+  mv /etc/.logrotate.cronjob "/etc/periodic/${LOGROTATE_CRON:-15min}/logrotate"
+else
+  echo "assuming \"${LOGROTATE_CRON:-15min}\" is a cron expression; appending to root's crontab" | ts "${TS_FORMAT}"
+  echo "${LOGROTATE_CRON:-15min} /etc/.logrotate.cronjob" >> /var/spool/cron/crontabs/root
+fi
+
+# shellcheck disable=SC2086
+exec crond -d ${CROND_LOGLEVEL:-7} -f 2>&1 | ts "${TS_FORMAT}"
+
 # Start supervisord and services
 exec /usr/bin/supervisord -n -c /etc/supervisord.conf
-

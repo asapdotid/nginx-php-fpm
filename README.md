@@ -12,6 +12,7 @@ Custom from original `richarvey/nginx-php-fpm`:
 -   nginx 1.20.2 (Stable version)
     -   Snippets for handling errors
     -   Custom errors template: `404`, `403` & `502`
+-   Logrotate
 
 ### Versioning
 

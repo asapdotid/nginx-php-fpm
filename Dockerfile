@@ -280,12 +280,20 @@ RUN echo "cgi.fix_pathinfo=0" > ${php_vars} &&\
         -e "s/listen = 127.0.0.1:9000/listen = \/var\/run\/php-fpm.sock/g" \
         -e "s/^;clear_env = no$/clear_env = no/" \
         ${fpm_conf}
-#    ln -s /etc/php7/php.ini /etc/php7/conf.d/php.ini && \
+    # ln -s /etc/php7/php.ini /etc/php7/conf.d/php.ini && \
 RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini && \
 	sed -i \
 	    -e "s/;opcache/opcache/g" \
 	    -e "s/;zend_extension=opcache/zend_extension=opcache/g" \
             /usr/local/etc/php/php.ini
+
+# Logrotate
+RUN set -x \
+  && apk add --no-cache logrotate moreutils \
+  && mv /etc/periodic/daily/logrotate /etc/.logrotate.cronjob
+
+# config logrotate nginx
+ADD config/etc/logrotate.d/nginx /etc/logrotate.d/nginx
 
 # Add Scripts
 ADD scripts/start.sh /start.sh
